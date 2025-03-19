@@ -2,9 +2,10 @@
 
 import { ImagePool } from '@squoosh/lib';
 import fs from 'fs-extra';
-import path from 'path';
+import path from 'node:path';
 import prompts from 'prompts';
 import chalk from 'chalk';
+import os from 'os';
 
 async function getUserInput() {
   const questions = [
@@ -39,6 +40,65 @@ async function getUserInput() {
   return await prompts(questions);
 }
 
+async function processImage(imagePool, inputFile, outputDir, quality, formats) {
+  const fileName = path.basename(inputFile, path.extname(inputFile));
+  const originalExt = path.extname(inputFile).toLowerCase().slice(1);
+  const image = imagePool.ingestImage(inputFile);
+
+  await image.preprocess({});
+
+  const encodeTasks = [];
+  const writeTasks = [];
+
+  if (originalExt === 'jpg' || originalExt === 'jpeg') {
+    encodeTasks.push(image.encode({ mozjpeg: { quality } }));
+    writeTasks.push({
+      format: 'mozjpeg',
+      outputFile: path.join(outputDir, `${fileName}.${originalExt}`),
+    });
+  } else if (originalExt === 'png') {
+    encodeTasks.push(image.encode({ oxipng: { level: Math.round((1 - quality / 100) * 6) } }));
+    writeTasks.push({
+      format: 'oxipng',
+      outputFile: path.join(outputDir, `${fileName}.${originalExt}`),
+    });
+  }
+
+  if (formats.includes('webp')) {
+    encodeTasks.push(image.encode({
+      webp: {
+        quality,
+        method: 4
+      }
+    }));
+    writeTasks.push({
+      format: 'webp',
+      outputFile: path.join(outputDir, `${fileName}.webp`),
+    });
+  }
+
+  if (formats.includes('avif')) {
+    encodeTasks.push(image.encode({
+      avif: {
+        quality,
+        speed: 6
+      },
+    }));
+    writeTasks.push({
+      format: 'avif',
+      outputFile: path.join(outputDir, `${fileName}.avif`),
+    });
+  }
+
+  await Promise.all(encodeTasks);
+
+  for (const { format, outputFile } of writeTasks) {
+    const encoded = await image.encodedWith[format];
+    await fs.writeFile(outputFile, encoded.binary);
+    console.log(chalk.green(`Processed: ${outputFile}`));
+  }
+}
+
 async function processImages() {
   const { inputPath, quality, formats } = await getUserInput();
 
@@ -52,7 +112,7 @@ async function processImages() {
     await fs.ensureDir(outputDir);
 
     const files = await fs.readdir(inputPath);
-    const imageFiles = files.filter(file => /\.(jpg|jpeg|png)$/i.test(file));
+    const imageFiles = files.filter((file) => /\.(jpg|jpeg|png)$/i.test(file));
 
     if (imageFiles.length === 0) {
       console.log(chalk.yellow('No images (jpg, jpeg, png) found in the folder.'));
@@ -61,43 +121,13 @@ async function processImages() {
 
     console.log(chalk.blue(`Found ${imageFiles.length} images to process...`));
 
-    const imagePool = new ImagePool();
+    const imagePool = new ImagePool(Math.max(2, Math.min(8, os.cpus().length)));
 
-    for (const file of imageFiles) {
-      const inputFile = path.join(inputPath, file);
-      const fileName = path.basename(file, path.extname(file));
-      const originalExt = path.extname(file).toLowerCase().slice(1);
-      const image = imagePool.ingestImage(inputFile);
-      const originalOutputFile = path.join(outputDir, `${fileName}.${originalExt}`);
+    const processPromises = imageFiles.map((file) =>
+      processImage(imagePool, path.join(inputPath, file), outputDir, quality, formats)
+    );
 
-      if (originalExt === 'jpg' || originalExt === 'jpeg') {
-        await image.encode({ mozjpeg: { quality } });
-        const encodedJpeg = await image.encodedWith.mozjpeg;
-        await fs.writeFile(originalOutputFile, encodedJpeg.binary);
-        console.log(chalk.green(`Compressed to original format: ${originalOutputFile}`));
-      } else if (originalExt === 'png') {
-        await image.encode({ oxipng: { level: Math.round((1 - quality / 100) * 6) } });
-        const encodedPng = await image.encodedWith.oxipng;
-        await fs.writeFile(originalOutputFile, encodedPng.binary);
-        console.log(chalk.green(`Compressed to original format: ${originalOutputFile}`));
-      }
-
-      if (formats.includes('webp')) {
-        const webpOutputFile = path.join(outputDir, `${fileName}.webp`);
-        await image.encode({ webp: { quality } });
-        const encodedWebp = await image.encodedWith.webp;
-        await fs.writeFile(webpOutputFile, encodedWebp.binary);
-        console.log(chalk.green(`Converted to: ${webpOutputFile}`));
-      }
-
-      if (formats.includes('avif')) {
-        const avifOutputFile = path.join(outputDir, `${fileName}.avif`);
-        await image.encode({ avif: { quality } });
-        const encodedAvif = await image.encodedWith.avif;
-        await fs.writeFile(avifOutputFile, encodedAvif.binary);
-        console.log(chalk.green(`Converted to: ${avifOutputFile}`));
-      }
-    }
+    await Promise.all(processPromises);
 
     await imagePool.close();
     console.log(chalk.blue('Processing completed!'));
