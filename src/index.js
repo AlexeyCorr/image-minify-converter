@@ -5,7 +5,7 @@ import fs from 'fs-extra';
 import path from 'node:path';
 import prompts from 'prompts';
 import chalk from 'chalk';
-import os from 'os';
+import { cpus } from 'os';
 
 async function getUserInput() {
   const questions = [
@@ -65,12 +65,7 @@ async function processImage(imagePool, inputFile, outputDir, quality, formats) {
   }
 
   if (formats.includes('webp')) {
-    encodeTasks.push(image.encode({
-      webp: {
-        quality,
-        method: 4
-      }
-    }));
+    encodeTasks.push(image.encode({ webp: { quality, method: 4 } }));
     writeTasks.push({
       format: 'webp',
       outputFile: path.join(outputDir, `${fileName}.webp`),
@@ -78,12 +73,7 @@ async function processImage(imagePool, inputFile, outputDir, quality, formats) {
   }
 
   if (formats.includes('avif')) {
-    encodeTasks.push(image.encode({
-      avif: {
-        quality,
-        speed: 6
-      },
-    }));
+    encodeTasks.push(image.encode({ avif: { quality, speed: 6 } }));
     writeTasks.push({
       format: 'avif',
       outputFile: path.join(outputDir, `${fileName}.avif`),
@@ -112,7 +102,7 @@ async function processImages() {
     await fs.ensureDir(outputDir);
 
     const files = await fs.readdir(inputPath);
-    const imageFiles = files.filter((file) => /\.(jpg|jpeg|png)$/i.test(file));
+    const imageFiles = files.filter(file => /\.(jpg|jpeg|png)$/i.test(file));
 
     if (imageFiles.length === 0) {
       console.log(chalk.yellow('No images (jpg, jpeg, png) found in the folder.'));
@@ -121,14 +111,13 @@ async function processImages() {
 
     console.log(chalk.blue(`Found ${imageFiles.length} images to process...`));
 
-    const imagePool = new ImagePool(Math.max(2, Math.min(8, os.cpus().length)));
+    const imagePool = new ImagePool(cpus().length - 1);
 
     const processPromises = imageFiles.map((file) =>
       processImage(imagePool, path.join(inputPath, file), outputDir, quality, formats)
     );
 
     await Promise.all(processPromises);
-
     await imagePool.close();
     console.log(chalk.blue('Processing completed!'));
   } catch (error) {
