@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/alexeycorr/image-minify-converter/compare/v1.0.0...v1.1.0) (2025-03-19)
+
+
+### Features
+
+* update lib ([bddedb0](https://github.com/alexeycorr/image-minify-converter/commit/bddedb025cdfb9a80a21d9c2aa0156ba0f05c2e0))
+
 # 1.0.0 (2025-03-19)
 
 
