@@ -1,6 +1,6 @@
 {
   "name": "image-minify-converter",
-  "version": "1.0.2",
+  "version": "1.0.0",
   "description": "A command-line tool for compressing and converting images to WebP and AVIF formats.",
   "type": "module",
   "main": "src/index.js",
