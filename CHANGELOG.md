@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/alexeycorr/image-minify-converter/compare/v1.1.0...v1.1.1) (2025-03-19)
+
+
+### Bug Fixes
+
+* speed up conversion ([2c9f403](https://github.com/alexeycorr/image-minify-converter/commit/2c9f403f1c96d4ec64379c4e07acd3793ad6e208))
+
 # [1.1.0](https://github.com/alexeycorr/image-minify-converter/compare/v1.0.0...v1.1.0) (2025-03-19)
 
 
