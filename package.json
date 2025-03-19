@@ -1,0 +1,38 @@
+{
+  "name": "image-minify-converter",
+  "version": "1.0.1",
+  "description": "A command-line tool for compressing and converting images to WebP and AVIF formats.",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "image-minify": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@squoosh/lib": "^0.3.1",
+    "chalk": "^5.4.1",
+    "fs-extra": "^11.3.0",
+    "prompts": "^2.4.2"
+  },
+  "author": "alexeycorr <alexeycorr@gmail.com>",
+  "license": "MIT",
+  "keywords": [
+    "image",
+    "compression",
+    "conversion",
+    "cli",
+    "webp",
+    "avif",
+    "jpeg",
+    "png"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexeycorr/image-minify-converter.git"
+  },
+  "engines": {
+    "node": "16.x"
+  }
+}
