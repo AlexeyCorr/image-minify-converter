@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/alexeycorr/image-minify-converter/compare/v1.1.1...v1.2.0) (2025-07-08)
+
+
+### Features
+
+* make choose format not required ([6676b34](https://github.com/alexeycorr/image-minify-converter/commit/6676b34e8dcc2c50a0bc12ec377ba46a46fa9419))
+
 ## [1.1.1](https://github.com/alexeycorr/image-minify-converter/compare/v1.1.0...v1.1.1) (2025-03-19)
 
 
