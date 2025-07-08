@@ -13,7 +13,7 @@ async function getUserInput() {
       type: 'text',
       name: 'inputPath',
       message: 'Enter the path to the images folder:',
-      initial: './images',
+      initial: './',
       validate: value => fs.existsSync(value) ? true : 'Folder does not exist'
     },
     {
@@ -32,12 +32,20 @@ async function getUserInput() {
         { title: 'avif', value: 'avif' }
       ],
       initial: [0],
-      min: 1,
+      min: 0,
       hint: '- Use space to select, Enter to confirm'
     }
   ];
 
   return await prompts(questions);
+}
+
+function addEncodeAndWriteTask(format, options, image, encodeTasks, writeTasks, outputDir, fileName, ext) {
+  encodeTasks.push(image.encode({ [format]: options }));
+  writeTasks.push({
+    format,
+    outputFile: path.join(outputDir, `${fileName}.${ext}`),
+  });
 }
 
 async function processImage(imagePool, inputFile, outputDir, quality, formats) {
@@ -51,33 +59,17 @@ async function processImage(imagePool, inputFile, outputDir, quality, formats) {
   const writeTasks = [];
 
   if (originalExt === 'jpg' || originalExt === 'jpeg') {
-    encodeTasks.push(image.encode({ mozjpeg: { quality } }));
-    writeTasks.push({
-      format: 'mozjpeg',
-      outputFile: path.join(outputDir, `${fileName}.${originalExt}`),
-    });
+    addEncodeAndWriteTask('mozjpeg', { quality }, image, encodeTasks, writeTasks, outputDir, fileName, originalExt);
   } else if (originalExt === 'png') {
-    encodeTasks.push(image.encode({ oxipng: { level: Math.round((1 - quality / 100) * 6) } }));
-    writeTasks.push({
-      format: 'oxipng',
-      outputFile: path.join(outputDir, `${fileName}.${originalExt}`),
-    });
+    addEncodeAndWriteTask('oxipng', { level: Math.round((1 - quality / 100) * 6) }, image, encodeTasks, writeTasks, outputDir, fileName, originalExt);
   }
 
   if (formats.includes('webp')) {
-    encodeTasks.push(image.encode({ webp: { quality, method: 4 } }));
-    writeTasks.push({
-      format: 'webp',
-      outputFile: path.join(outputDir, `${fileName}.webp`),
-    });
+    addEncodeAndWriteTask('webp', { quality, method: 4 }, image, encodeTasks, writeTasks, outputDir, fileName, 'webp');
   }
 
   if (formats.includes('avif')) {
-    encodeTasks.push(image.encode({ avif: { quality, speed: 6 } }));
-    writeTasks.push({
-      format: 'avif',
-      outputFile: path.join(outputDir, `${fileName}.avif`),
-    });
+    addEncodeAndWriteTask('avif', { quality, speed: 6 }, image, encodeTasks, writeTasks, outputDir, fileName, 'avif');
   }
 
   await Promise.all(encodeTasks);
@@ -92,13 +84,18 @@ async function processImage(imagePool, inputFile, outputDir, quality, formats) {
 async function processImages() {
   const { inputPath, quality, formats } = await getUserInput();
 
-  if (!inputPath || quality === undefined || !formats) {
+  if (!inputPath || quality === undefined || formats === undefined) {
     console.log(chalk.yellow('Process canceled by user or invalid input provided.'));
     return;
   }
 
   try {
     const outputDir = path.join(inputPath, 'converted');
+
+    if (await fs.pathExists(outputDir)) {
+      await fs.remove(outputDir);
+    }
+
     await fs.ensureDir(outputDir);
 
     const files = await fs.readdir(inputPath);
